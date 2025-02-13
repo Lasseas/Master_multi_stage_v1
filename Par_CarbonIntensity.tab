@@ -1,0 +1,16 @@
+Technology	Energy_Carrier	CarbonIntensity
+Power_Grid	Electricity	19
+ElectricBoiler	Electricity	0
+HeatPump_LT	Electricity	0
+HeatPump_MT	Electricity	0
+PV	Electricity	1
+P2G	Electricity	0
+G2P	H2	0
+GasBoiler	H2	0
+GasBoiler	CH4	0
+GasBoiler	Biogas	0
+CHP	H2	0
+CHP	CH4	0
+CHP	Biogas	0
+Biogas_Grid	Biogas	1
+CH4_Grid	CH4	200

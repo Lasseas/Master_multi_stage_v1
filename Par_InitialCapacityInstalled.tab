@@ -1,0 +1,12 @@
+Technology	Initial_Installed_Capacity
+Power_Grid	50
+ElectricBoiler	5
+HeatPump_LT	10
+HeatPump_MT	5
+PV	5
+P2G	2
+G2P	10
+GasBoiler	15
+CHP	5
+Biogas_Grid	30
+CH4_Grid	30

@@ -1,0 +1,14 @@
+Technology	EnergyCarrier	TechToEC_Efficiency
+Power_Grid	Electricity	1.0
+ElectricBoiler	LT	0.99
+HeatPump_LT	LT	3.0
+HeatPump_MT	MT	2.0
+PV	Electricity	1.0
+P2G	H2	0.6
+G2P	Electricity	0.6
+GasBoiler	LT	0.93
+CHP	Electricity	0.3
+CHP	LT	0.45
+CHP	MT	0.45
+Biogas_Grid	Biogas	0.9999
+CH4_Grid	CH4	0.9999

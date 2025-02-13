@@ -9,7 +9,7 @@ import time
 import os 
 import matplotlib.pyplot as plt
 import platform
-import psutil
+#import psutil
 from pyomo.environ import *
 
 ##################################################################################
@@ -45,7 +45,7 @@ def read_all_sheets(excel):
         print(f"Saved file: {output_filename}")
 
 # Call the function with your Excel file
-read_all_sheets('Input-data_CaseStudy_Flex_Shift_aFRR.xlsx')
+read_all_sheets('Input_data_testkode.xlsx')
 
 ####################################################################
 ######################### MODEL SPECIFICATIONS #####################
@@ -86,6 +86,7 @@ model.Nodes = pyo.Set(ordered=True) #Set of Nodess
 model.Nodes_DA = pyo.Set(ordered=True, within = model.Nodes) #Set of Nodess
 model.Nodes_ID = pyo.Set(ordered=True, within = model.Nodes) #Set of Nodess
 model.Nodes_RT = pyo.Set(ordered=True, within = model.Nodes) #Set of Nodess
+model.Parents = pyo.Set(ordered=True, within = model.Nodes) #Set of Nodess
 model.Parent_Node = pyo.Set(dimen = 2, ordered = True)
 model.Mode_of_operation = pyo.Set(ordered = True)
 
@@ -109,11 +110,12 @@ data.load(filename="Set_of_FlexibleLoadForEC.tab", format="set", set=model.Flexi
 #data.load(filename="Subset_DownShiftForEC.tab", format="set", set=model.DownShiftForEnergyCarrier)
 data.load(filename="Subset_ShiftableLoadForEC.tab", format="set", set=model.ShiftableLoadForEnergyCarrier)
 data.load(filename="Set_of_LoadShiftingInterval.tab", format = "set", set = model.LoadShiftingIntervals)
-data.load(filename="Set_of_Nodes_DA.tab", format = "set", set = model.Nodes_DA)
-data.load(filename="Set_of_Nodes_ID.tab", format = "set", set = model.Nodes_ID)
-data.load(filename="Set_of_Nodes_RT.tab", format = "set", set = model.Nodes_RT)
-data.load(filename="Set_of_Parent_Node.tab", format = "set", set = model.Parent_Node)
-data.load(filename="Set_of_Mode_of_Operation.tab", format = "set", set = model.Mode_of_operation)
+data.load(filename="Subset_Plan_Nodes.tab", format = "set", set = model.Nodes_DA)
+data.load(filename="Subset_ID_Nodes.tab", format = "set", set = model.Nodes_ID)
+data.load(filename="Subset_RT_Nodes.tab", format = "set", set = model.Nodes_RT)
+data.load(filename="Set_parent_coupling.tab", format = "set", set = model.Parent_Node)
+data.load(filename="Set_Mode_of_Operation.tab", format = "set", set = model.Mode_of_operation)
+data.load(filename="Set_Parent_Node.tab", format = "set", set = model.Parents)
 
 
 
@@ -124,13 +126,13 @@ PARAMETERS
 
 #Declaring Parameters
 model.Cost_Energy = pyo.Param(model.Nodes, model.Time, model.Technology, model.Mode_of_operation, default=0.0)  # Cost of using energy source i at time t
-model.Cost_Battery = pyo.Param(model.Nodes, model.Time, model.FlexibleLoad)
+model.Cost_Battery = pyo.Param(model.FlexibleLoad)
 model.Cost_Export = pyo.Param(model.Nodes, model.Time, model.EnergyCarrier)  # Income from exporting energy to the grid at time t
 model.Cost_Expansion_Tec = pyo.Param(model.Technology) #Capacity expansion cost
 model.Cost_Expansion_Bat = pyo.Param(model.FlexibleLoad) #Capacity expansion cost
 model.Cost_Emission = pyo.Param() #Carbon price
 model.Cost_Grid = pyo.Param() #Grid tariff
-model.Cost_Imbal = pyo.Param(model.Nodes, model. Time)
+model.Cost_Imbal = pyo.Param()
 model.aFRR_Up_Capacity_Price = pyo.Param(model.Nodes, model.Time, default=0.0)  # Capacity Price for aFRR up regulation 
 model.aFRR_Dwn_Capacity_Price = pyo.Param(model.Nodes, model.Time, default=0.0)  # Capcaity Price for aFRR down regulation
 model.aFRR_Up_Activation_Price = pyo.Param(model.Nodes, model.Time, default=0.0)  # Activation Price for aFRR up regulation 
@@ -163,6 +165,7 @@ model.Available_Excess_Heat = pyo.Param() #Fraction of the total available exces
 model.Energy2Power_Ratio = pyo.Param(model.FlexibleLoad)
 model.Max_CAPEX_tech = pyo.Param(model.Technology)
 model.Max_CAPEX_flex = pyo.Param(model.FlexibleLoad)
+model.Max_Carbon_Emission = pyo.Param()
 #model.Shiftable_Window = pyo.Param() #Time window if flexible time window is used
 
 #Reading the Parameters, and loading the data
@@ -279,13 +282,13 @@ def objective(model):
 
                 #Real-time adjustment compensation/cost + imbalance cost
                 + model.RK_Up_Price[n, t] * model.x_RT_Up[n, t] - model.RK_Dwn_Price[n, t] * model.x_RT_Dwn[n, t]
-                + model.Cost_Imbal[n, t] * (model.x_RT_Up[n, t] + model.x_RT_Dwn[n, t])
+                + model.Cost_Imbal * (model.x_RT_Up[n, t] + model.x_RT_Dwn[n, t])
 
                 #Grid tariff
                 + sum(model.Cost_Grid * model.y_max[n, m] for m in model.Month)
 
                 #Variable storage costs
-                + sum(model.Cost_Battery[n, t, b] * model.q_discharge[n, t, b] for b in model.FlexibleLoad)
+                + sum(model.Cost_Battery[b] * model.q_discharge[n, t, b] for b in model.FlexibleLoad)
             )
             for n in model.Nodes_RT
                 

@@ -1,0 +1,15 @@
+Technology	EnergyCarrier	Operational_mode
+ElectricBoiler	Electricity	1
+HeatPump_LT	Electricity	1
+HeatPump_MT	Electricity	1
+P2G	Electricity	1
+G2P	H2	1
+GasBoiler	H2	1
+GasBoiler	CH4	2
+GasBoiler	Biogas	3
+CHP	H2	1
+CHP	H2	2
+CHP	CH4	3
+CHP	CH4	4
+CHP	Biogas	5
+CHP	Biogas	6

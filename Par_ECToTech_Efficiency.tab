@@ -1,0 +1,13 @@
+Technology	EnergyCarrier	ECToTech_Efficiency
+ElectricBoiler	Electricity	1
+HeatPump_LT	Electricity	1
+HeatPump_MT	Electricity	1
+PV	Electricity	1
+P2G	Electricity	1
+G2P	H2	1
+GasBoiler	H2	1
+GasBoiler	CH4	1
+GasBoiler	Biogas	1
+CHP	H2	1
+CHP	CH4	1
+CHP	Biogas	1
