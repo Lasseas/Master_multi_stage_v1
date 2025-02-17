@@ -83,9 +83,9 @@ model.ShiftableLoadForEnergyCarrier = pyo.Set(dimen = 2, ordered = True, within 
 #model.FlexibleLoadForEnergyCarrier = pyo.Set(model.EnergyCarrier, within=model.FlexibleLoad, initialize=tab_to_dict("Set_of_FlexibleLoadForEC.tab"))
 #model.ShiftableLoadForEnergyCarrier = pyo.Set(model.EnergyCarrier, within=model.FlexibleLoadForEnergyCarrier, initialize=tab_to_dict("Subset_ShiftableLoads.tab")) #Subset of shiftable loads (shift-able batteries)
 model.Nodes = pyo.Set(ordered=True) #Set of Nodess
-model.Nodes_DA = pyo.Set(dimen=2, ordered=True, within = model.Nodes) #Set of Nodess
-model.Nodes_ID = pyo.Set(dimen=2, ordered=True, within = model.Nodes) #Set of Nodess
-model.Nodes_RT = pyo.Set(dimen=2, ordered=True, within = model.Nodes) #Set of Nodess
+model.Nodes_DA = pyo.Set(dimen=2, ordered=True)#, within = model.Nodes) #SubSet of Nodess
+model.Nodes_ID = pyo.Set(dimen=2, ordered=True)#, within = model.Nodes) #SubSet of Nodess
+model.Nodes_RT = pyo.Set(dimen=2, ordered=True)#, within = model.Nodes) #SubSet of Nodess
 #model.Parents = pyo.Set(ordered=True, within = model.Nodes) #Set of Nodess
 #model.Parent_Node = pyo.Set(dimen = 2, ordered = True)
 model.Mode_of_operation = pyo.Set(ordered = True)
@@ -165,7 +165,7 @@ model.Available_Excess_Heat = pyo.Param() #Fraction of the total available exces
 model.Energy2Power_Ratio = pyo.Param(model.FlexibleLoad)
 model.Max_CAPEX_tech = pyo.Param(model.Technology)
 model.Max_CAPEX_flex = pyo.Param(model.FlexibleLoad)
-model.Max_Carbon_Emission = pyo.Param()
+model.Max_Carbon_Emission = pyo.Param(default = 0) #Maximum allowable carbon emissions per year
 #model.Shiftable_Window = pyo.Param() #Time window if flexible time window is used
 
 #Reading the Parameters, and loading the data
@@ -207,6 +207,10 @@ data.load(filename="Par_ActivationFactor_Up_Reg.tab", param=model.Activation_Fac
 data.load(filename="Par_ActivationFactor_Dwn_Reg.tab", param=model.Activation_Factor_DWN_Regulation, format = "table")
 data.load(filename="Par_AvailableExcessHeat.tab", param=model.Available_Excess_Heat, format = "table")
 data.load(filename="Par_Energy2Power_ratio.tab", param=model.Energy2Power_Ratio, format = "table")
+data.load(filename="Par_Ramping_factor.tab", param=model.Ramping_Factor, format = "table")
+data.load(filename="Par_Max_CAPEX_tec.tab", param=model.Max_CAPEX_tech, format = "table")
+data.load(filename="Par_Max_CAPEX_bat.tab", param=model.Max_CAPEX_flex, format = "table")
+data.load(filename="Par_Max_Carbon_Emission.tab", param=model.Max_Carbon_Emission, format = "table")
 #data.load(filename="Filename.tab", param=model.Shiftable_Window, format = "table")
 
 """
@@ -245,6 +249,7 @@ STATING THE MATHEMATICAL MODEL
 """
 OBJECTIVE FUNCTION
 """
+"""
 def objective(model):
     return(
         #Investment cost
@@ -253,22 +258,73 @@ def objective(model):
 
         #Day-ahead and Capacity reservation
         + sum(
-            sum(model.Node_Probability[n]*(
-                model.Spot_Price[n, t] * model.x_DA[n, t]
-                - sum(model.aFRR_Up_Capacity_Price[n, t] * model.x_UP[n, t, b] + 
-                      model.aFRR_Dwn_Capacity_Price[n, t] * model.x_DWN[n, t, b] for b in model.FlexibleLoad) 
+            sum(model.Node_Probability[n[0]]*(
+                model.Spot_Price[n, t] * model.x_DA[n[0], t]
+                - sum(model.aFRR_Up_Capacity_Price[n[0], t] * model.x_UP[n[0], t, b] + 
+                      model.aFRR_Dwn_Capacity_Price[n[0], t] * model.x_DWN[n[0], t, b] for b in model.FlexibleLoad) 
             )for n in model.Nodes_DA)
 
             #Intraday market
-            + sum(model.Node_Probability[n] * (model.Intraday_Price[n, t] * (model.x_ID_Up[n, t] - model.x_ID_Dwn[n, t])) for n in model.Nodes_ID)
+            + sum(model.Node_Probability[n[0]] * (model.Intraday_Price[n[0], t] * (model.x_ID_Up[n[0], t] - model.x_ID_Dwn[n[0], t])) for n in model.Nodes_ID)
 
             #Cost/Compensatioin activation
-            + sum(model.Node_Probability[n]*(
-                sum(-model.Activation_Factor_UP_Regulation[n, t] * model.aFRR_Up_Activation_Price[n, t] * model.x_UP[n, t, b]
-                + model.Activation_Factor_DWN_Regulation[n, t] * model.aFRR_Dwn_Activation_Price[n, t] * model.x_DWN[n, t, b]
+            + sum(model.Node_Probability[n[0]]*(
+                sum(-model.Activation_Factor_UP_Regulation[n[0], t] * model.aFRR_Up_Activation_Price[n[0], t] * model.x_UP[n[0], t, b]
+                + model.Activation_Factor_DWN_Regulation[n[0], t] * model.aFRR_Dwn_Activation_Price[n[0], t] * model.x_DWN[n[0], t, b]
                 for b in model.FlexibleLoad)
 
                 #Cost of Consumption and Carbon emissions
+                + sum(
+                    sum(
+                        model.y_activity[n[0], t, i] * (model.Cost_Energy[n[0], t, i] + model.Carbon_Intensity[i, e])
+                        for i in model.Technology if (i, e) in model.TechnologyToEnergyCarrier
+                    )
+                    - model.Cost_Export[n[0], t, e] * model.z_export[n[0], t, e] for e in model.EnergyCarrier
+                )
+
+                #Real-time adjustment compensation/cost + imbalance cost
+                + model.RK_Up_Price[n[0], t] * model.x_RT_Up[n[0], t] - model.RK_Dwn_Price[n[0], t] * model.x_RT_Dwn[n[0], t]
+                + model.Cost_Imbal * (model.x_RT_Up[n[0], t] + model.x_RT_Dwn[n[0], t])
+
+                #Grid tariff
+                + sum(model.Cost_Grid * model.y_max[n[0], m] for m in model.Month)
+
+                #Variable storage costs
+                + sum(model.Cost_Battery[b] * model.q_discharge[n[0], t, b] for b in model.FlexibleLoad)
+            )
+            for n in model.Nodes_RT
+                
+            )
+            for t in model.Time
+        )
+    )
+
+model.Objective = pyo.Objective(rule=objective, sense=pyo.minimize)
+"""
+def objective(model):
+    return (
+        # Investment cost
+        sum(model.Cost_Expansion_Tec[i] * model.v_new_tech[i] for i in model.Technology)
+        + sum(model.Cost_Expansion_Bat[b] * model.v_new_bat[b] for b in model.FlexibleLoad)
+
+        # Day-ahead and Capacity reservation
+        + sum(
+            sum(model.Node_Probability[n] * (
+                model.Spot_Price[n, t] * model.x_DA[n, t]
+                - sum(model.aFRR_Up_Capacity_Price[n, t] * model.x_UP[n, t, b] +
+                      model.aFRR_Dwn_Capacity_Price[n, t] * model.x_DWN[n, t, b] for b in model.FlexibleLoad)
+            ) for n, _ in model.Nodes_DA)
+
+            # Intraday market
+            + sum(model.Node_Probability[n] * (model.Intraday_Price[n, t] * (model.x_ID_Up[n, t] - model.x_ID_Dwn[n, t])) for n, _ in model.Nodes_ID)
+
+            # Cost/Compensation activation
+            + sum(model.Node_Probability[n] * (
+                sum(-model.Activation_Factor_UP_Regulation[n, t] * model.aFRR_Up_Activation_Price[n, t] * model.x_UP[n, t, b]
+                    + model.Activation_Factor_DWN_Regulation[n, t] * model.aFRR_Dwn_Activation_Price[n, t] * model.x_DWN[n, t, b]
+                    for b in model.FlexibleLoad)
+
+                # Cost of Consumption and Carbon emissions
                 + sum(
                     sum(
                         model.y_activity[n, t, i] * (model.Cost_Energy[n, t, i] + model.Carbon_Intensity[i, e])
@@ -277,18 +333,17 @@ def objective(model):
                     - model.Cost_Export[n, t, e] * model.z_export[n, t, e] for e in model.EnergyCarrier
                 )
 
-                #Real-time adjustment compensation/cost + imbalance cost
+                # Real-time adjustment compensation/cost + imbalance cost
                 + model.RK_Up_Price[n, t] * model.x_RT_Up[n, t] - model.RK_Dwn_Price[n, t] * model.x_RT_Dwn[n, t]
                 + model.Cost_Imbal * (model.x_RT_Up[n, t] + model.x_RT_Dwn[n, t])
 
-                #Grid tariff
+                # Grid tariff
                 + sum(model.Cost_Grid * model.y_max[n, m] for m in model.Month)
 
-                #Variable storage costs
+                # Variable storage costs
                 + sum(model.Cost_Battery[b] * model.q_discharge[n, t, b] for b in model.FlexibleLoad)
             )
-            for n in model.Nodes_RT
-                
+            for n, _ in model.Nodes_RT
             )
             for t in model.Time
         )
@@ -665,7 +720,7 @@ model.FlexibleAssetEnergyLimits = pyo.Constraint(model.Nodes, model.Time, model.
 ############## AVAILABILITY CONSTRAINT #############
 ####################################################
 
-def supply_limitation(model, n, t, i, e):
+def supply_limitation(model, n, t, i, e, o):
     return (sum(sum(model.y_out[n, t, i, e, o] for o in model.Mode_of_operation) for e in model.EnergyCarrier if (i,e) in model.TechnologyToEnergyCarrier)  
             <= model.Availability_Factor[n, t, i] * (model.Initial_Installed_Capacity[i] + model.v_new_tech[i]))
 
@@ -689,7 +744,7 @@ def peak_load(model, n, t, i, e, o, m):
     else:
         return pyo.Constraint.Skip
 
-model.PeakLoad = pyo.Constraint(model.Nodes, model.TimeInMonth, model.TechnologyToEnergyCarrier, model.Mode_of_operation, model.Month, rule=peak_load)
+model.PeakLoad = pyo.Constraint(model.Nodes, model.TimeInMonth, model.TechnologyToEnergyCarrier, model.Month, rule=peak_load)
 
 ##############################################################
 ##################### INVESTMENT LIMITATIONS #################
@@ -708,22 +763,16 @@ model.CAPEXFlexibleLoadLim = pyo.Constraint(model.FlexibleLoad, rule=CAPEX_flexi
 ##################### CARBON EMISSION LIMIT ##################
 ##############################################################
 def Carbon_Emission_Limit(model, n):
-    return(
-    sum(
-        sum(
-            sum(
-                sum(model.y_activity[n, t, i] * model.Carbon_Intensity[i, e]
-                    )
-                    for i in model.Technology if (i,e) in model.TechnologyToEnergyCarrier
-            )
-            for e in model.EnergyCarrier
-        )
+    total_emission = sum(
+        model.y_activity[n, t, i] * model.Carbon_Intensity[i, e]
         for t in model.Time
-
-    ) <= model.Max_Carbon_Emission
+        for i in model.Technology
+        for e in model.EnergyCarrier
+        if (i, e) in model.TechnologyToEnergyCarrier
     )
-    
-
+    if total_emission == 0:
+        return pyo.Constraint.Skip
+    return total_emission <= model.Max_Carbon_Emission
 model.CarbonEmissionLimit = pyo.Constraint(model.Nodes, rule=Carbon_Emission_Limit)
 
 ##############################################################
@@ -734,40 +783,40 @@ def Day_ahead_to_Intraday(model, n, p, t):
 
 model.DayAheadToIntraday = pyo.Constraint(model.Nodes_ID, model.Time, rule=Day_ahead_to_Intraday)
 
-def Day_ahead_to_Intraday_to_RealTime(model, n, t, p):
+def Day_ahead_to_Intraday_to_RealTime(model, n, p, t):
     return (model.x_DA[n, t] == model.x_DA[p, t])
 
-model.DayAheadToIntradayToRealTime = pyo.Constraint(model.Nodes_RT, model.Time, model.Parent_Node, rule=Day_ahead_to_Intraday_to_RealTime)
+model.DayAheadToIntradayToRealTime = pyo.Constraint(model.Nodes_RT, model.Time, rule=Day_ahead_to_Intraday_to_RealTime)
 
-def Intraday_to_RealTime_Up(model, n, t, p):
+def Intraday_to_RealTime_Up(model, n, p, t):
     return (model.x_ID_Up[n, t] == model.x_ID_Up[p, t])
 
-model.IntradayToRealTimeUp = pyo.Constraint(model.Nodes_RT, model.Time, model.Parent_Node, rule=Intraday_to_RealTime_Up)
+model.IntradayToRealTimeUp = pyo.Constraint(model.Nodes_RT, model.Time, rule=Intraday_to_RealTime_Up)
 
-def Intraday_to_RealTime_Dwn(model, n, t, p):
+def Intraday_to_RealTime_Dwn(model, n, p, t):
     return (model.x_ID_Dwn[n, t] == model.x_ID_Dwn[p, t])
 
-model.IntradayToRealTimeDown = pyo.Constraint(model.Nodes_RT, model.Time, model.Parent_Node, rule=Intraday_to_RealTime_Dwn)
+model.IntradayToRealTimeDown = pyo.Constraint(model.Nodes_RT, model.Time, rule=Intraday_to_RealTime_Dwn)
 
-def Reserve_Capacity_Dwn_to_ID(model, n, t, b, p):
+def Reserve_Capacity_Dwn_to_ID(model, n, p, t, b):
     return (model.x_DWN[n, t, b] == model.x_DWN[p, t, b])
 
-model.DayAheadToIntraday = pyo.Constraint(model.Nodes_ID, model.Time, model.FlexibleLoad, model.Parent_Node, rule = Reserve_Capacity_Dwn_to_ID) 
+model.DayAheadToIntraday = pyo.Constraint(model.Nodes_ID, model.Time, model.FlexibleLoad, rule = Reserve_Capacity_Dwn_to_ID) 
 
-def Reserve_Capacity_Dwn_to_RT(model, n, t, b, p):
-    return (model.x_DWN[n, t, b] == model.x_DWN[p, t])
+def Reserve_Capacity_Dwn_to_RT(model, n, p, t, b):
+    return (model.x_DWN[n, t, b] == model.x_DWN[p, t, b])
 
-model.DayAheadToIntradayToRealTime = pyo.Constraint(model.Nodes_RT, model.Time, model.FlexibleLoad, model.Parent_Node, rule=Reserve_Capacity_Dwn_to_RT)
+model.DayAheadToIntradayToRealTime = pyo.Constraint(model.Nodes_RT, model.Time, model.FlexibleLoad, rule=Reserve_Capacity_Dwn_to_RT)
 
-def Reserve_Capacity_Up_to_ID(model, n, t, b, p):
+def Reserve_Capacity_Up_to_ID(model, n, p, t, b):
     return (model.x_UP[n, t, b] == model.x_UP[p, t, b])
 
-model.DayAheadToIntraday = pyo.Constraint(model.Nodes_ID, model.Time, model.FlexibleLoad, model.Parent_Node, rule = Reserve_Capacity_Dwn_to_ID) 
+model.DayAheadToIntraday = pyo.Constraint(model.Nodes_ID, model.Time, model.FlexibleLoad, rule = Reserve_Capacity_Dwn_to_ID) 
 
-def Reserve_Capacity_Up_to_RT(model, n, t, b, p):
-    return (model.x_UP[n, t, b] == model.x_UP[p, t])
+def Reserve_Capacity_Up_to_RT(model, n, p, t, b):
+    return (model.x_UP[n, t, b] == model.x_UP[p, t, b])
 
-model.DayAheadToIntradayToRealTime = pyo.Constraint(model.Nodes_RT, model.Time, model.FlexibleLoad, model.Parent_Node, rule=Reserve_Capacity_Dwn_to_RT)
+model.DayAheadToIntradayToRealTime = pyo.Constraint(model.Nodes_RT, model.Time, model.FlexibleLoad, rule=Reserve_Capacity_Dwn_to_RT)
 
 """
 # Start the timer
@@ -791,7 +840,7 @@ MATCHING DATA FROM CASE WITH MATHEMATICAL MODEL AND PRINTING DATA
 """
 our_model = model.create_instance(data)   
 our_model.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT) #Import dual values into solver results
-#import pdb; pdb.set_trace()
+import pdb; pdb.set_trace()
 
 #start the timer
 start_time = time.time()
