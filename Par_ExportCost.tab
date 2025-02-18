@@ -41,9 +41,6 @@ Node	Time	EnergyCarrier	CostExport
 14	1	Electricity	16.2868
 14	2	Electricity	15.0404
 14	3	Electricity	13.6952
-15	1	Electricity	10.5032
-15	2	Electricity	8.838799999999999
-15	3	Electricity	8.451199999999998
 1	1	LT	7.904
 1	2	LT	3.9292
 1	3	LT	3.7087999999999997
@@ -86,9 +83,6 @@ Node	Time	EnergyCarrier	CostExport
 14	1	LT	0.0
 14	2	LT	0.0
 14	3	LT	0.0
-15	1	LT	0.0
-15	2	LT	0.0
-15	3	LT	0.0
 1	1	MT	0.0
 1	2	MT	0.0
 1	3	MT	0.0
@@ -131,9 +125,6 @@ Node	Time	EnergyCarrier	CostExport
 14	1	MT	0.0
 14	2	MT	0.0
 14	3	MT	0.0
-15	1	MT	0.0
-15	2	MT	0.0
-15	3	MT	0.0
 1	1	H2	0.0
 1	2	H2	0.0
 1	3	H2	0.0
@@ -176,9 +167,6 @@ Node	Time	EnergyCarrier	CostExport
 14	1	H2	0.0
 14	2	H2	0.0
 14	3	H2	0.0
-15	1	H2	0.0
-15	2	H2	0.0
-15	3	H2	0.0
 1	1	CH4	0.0
 1	2	CH4	0.0
 1	3	CH4	0.0
@@ -221,9 +209,6 @@ Node	Time	EnergyCarrier	CostExport
 14	1	CH4	150.15
 14	2	CH4	150.15
 14	3	CH4	150.15
-15	1	CH4	150.15
-15	2	CH4	150.15
-15	3	CH4	150.15
 1	1	Biogas	150.15
 1	2	Biogas	150.15
 1	3	Biogas	150.15
@@ -266,6 +251,3 @@ Node	Time	EnergyCarrier	CostExport
 14	1	Biogas	180.18
 14	2	Biogas	180.18
 14	3	Biogas	180.18
-15	1	Biogas	180.18
-15	2	Biogas	180.18
-15	3	Biogas	180.18

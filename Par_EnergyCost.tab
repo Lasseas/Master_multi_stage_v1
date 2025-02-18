@@ -41,9 +41,6 @@ Node	Time	Technology	Cost
 14	1	Power_Grid	17.144000000000002
 14	2	Power_Grid	15.832
 14	3	Power_Grid	14.416
-15	1	Power_Grid	11.056000000000001
-15	2	Power_Grid	9.304
-15	3	Power_Grid	8.895999999999999
 1	1	ElectricBoiler	0.0
 1	2	ElectricBoiler	0.0
 1	3	ElectricBoiler	0.0
@@ -86,9 +83,6 @@ Node	Time	Technology	Cost
 14	1	ElectricBoiler	0.0
 14	2	ElectricBoiler	0.0
 14	3	ElectricBoiler	0.0
-15	1	ElectricBoiler	0.0
-15	2	ElectricBoiler	0.0
-15	3	ElectricBoiler	0.0
 1	1	HeatPump_LT	0.0
 1	2	HeatPump_LT	0.0
 1	3	HeatPump_LT	0.0
@@ -131,9 +125,6 @@ Node	Time	Technology	Cost
 14	1	HeatPump_LT	0.0
 14	2	HeatPump_LT	0.0
 14	3	HeatPump_LT	0.0
-15	1	HeatPump_LT	0.0
-15	2	HeatPump_LT	0.0
-15	3	HeatPump_LT	0.0
 1	1	HeatPump_MT	0.0
 1	2	HeatPump_MT	0.0
 1	3	HeatPump_MT	0.0
@@ -176,9 +167,6 @@ Node	Time	Technology	Cost
 14	1	HeatPump_MT	0.0
 14	2	HeatPump_MT	0.0
 14	3	HeatPump_MT	0.0
-15	1	HeatPump_MT	0.0
-15	2	HeatPump_MT	0.0
-15	3	HeatPump_MT	0.0
 1	1	PV	0.0
 1	2	PV	0.0
 1	3	PV	0.0
@@ -221,9 +209,6 @@ Node	Time	Technology	Cost
 14	1	PV	0.0
 14	2	PV	0.0
 14	3	PV	0.0
-15	1	PV	0.0
-15	2	PV	0.0
-15	3	PV	0.0
 1	1	P2G	0.0
 1	2	P2G	0.0
 1	3	P2G	0.0
@@ -266,9 +251,6 @@ Node	Time	Technology	Cost
 14	1	P2G	0.0
 14	2	P2G	0.0
 14	3	P2G	0.0
-15	1	P2G	0.0
-15	2	P2G	0.0
-15	3	P2G	0.0
 1	1	G2P	0.0
 1	2	G2P	0.0
 1	3	G2P	0.0
@@ -311,9 +293,6 @@ Node	Time	Technology	Cost
 14	1	G2P	0.0
 14	2	G2P	0.0
 14	3	G2P	0.0
-15	1	G2P	0.0
-15	2	G2P	0.0
-15	3	G2P	0.0
 1	1	GasBoiler	0.0
 1	2	GasBoiler	0.0
 1	3	GasBoiler	0.0
@@ -356,9 +335,6 @@ Node	Time	Technology	Cost
 14	1	GasBoiler	0.0
 14	2	GasBoiler	0.0
 14	3	GasBoiler	0.0
-15	1	GasBoiler	0.0
-15	2	GasBoiler	0.0
-15	3	GasBoiler	0.0
 1	1	CHP	0.0
 1	2	CHP	0.0
 1	3	CHP	0.0
@@ -401,9 +377,6 @@ Node	Time	Technology	Cost
 14	1	CHP	0.0
 14	2	CHP	0.0
 14	3	CHP	0.0
-15	1	CHP	0.0
-15	2	CHP	0.0
-15	3	CHP	0.0
 1	1	Biogas_Grid	64.5
 1	2	Biogas_Grid	64.5
 1	3	Biogas_Grid	64.5
@@ -446,9 +419,6 @@ Node	Time	Technology	Cost
 14	1	Biogas_Grid	64.5
 14	2	Biogas_Grid	64.5
 14	3	Biogas_Grid	64.5
-15	1	Biogas_Grid	64.5
-15	2	Biogas_Grid	64.5
-15	3	Biogas_Grid	64.5
 1	1	CH4_Grid	39.479
 1	2	CH4_Grid	39.479
 1	3	CH4_Grid	39.479
@@ -491,6 +461,3 @@ Node	Time	Technology	Cost
 14	1	CH4_Grid	39.479
 14	2	CH4_Grid	39.479
 14	3	CH4_Grid	39.479
-15	1	CH4_Grid	39.479
-15	2	CH4_Grid	39.479
-15	3	CH4_Grid	39.479
