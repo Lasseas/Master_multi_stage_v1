@@ -10,3 +10,4 @@ GasBoiler	15
 CHP	5
 Biogas_Grid	30
 CH4_Grid	30
+CH4_H2_Mixer	1000

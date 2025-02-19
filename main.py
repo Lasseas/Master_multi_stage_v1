@@ -120,8 +120,8 @@ model.Demand = pyo.Param(model.Nodes, model.Time, model.EnergyCarrier, default =
 model.Max_charge_discharge_rate = pyo.Param(model.FlexibleLoad, default = 1) # Maximum symmetric charge and discharge rate
 model.Charge_Efficiency = pyo.Param(model.FlexibleLoad)  # Efficiency of charging flexible load b [-]
 model.Discharge_Efficiency = pyo.Param(model.FlexibleLoad)  # Efficiency of discharging flexible load b [-]
-model.Technology_To_EnergyCarrier_Efficiency = pyo.Param(model.Technology, model.EnergyCarrier, model.Mode_of_operation) #Efficiency of technology i when supplying fuel e
-model.EnergyCarrier_To_Technlogy_Efficiency = pyo.Param(model.Technology, model.EnergyCarrier, model.Mode_of_operation) #Efficiency of technology i when consuming fuel e
+model.Technology_To_EnergyCarrier_Efficiency = pyo.Param(model.TechnologyToEnergyCarrier) #Efficiency of technology i when supplying fuel e
+model.EnergyCarrier_To_Technlogy_Efficiency = pyo.Param(model.EnergyCarrierToTechnology) #Efficiency of technology i when consuming fuel e
 model.Max_Storage_Capacity = pyo.Param(model.FlexibleLoad)  # Maximum energy storage capacity of flexible load b [MWh]
 model.Self_Discharge = pyo.Param(model.FlexibleLoad)  # Self-discharge rate of flexible load b [%]
 model.Initial_SOC = pyo.Param(model.FlexibleLoad)  # Initial state of charge for flexible load b [-]
@@ -132,7 +132,7 @@ model.Down_Shift_Max = pyo.Param()  # Maximum allowable down-shifting in load sh
 model.Initial_Installed_Capacity = pyo.Param(model.Technology) #Initial installed capacity at site for technology i
 model.Ramping_Factor = pyo.Param(model.Technology)
 model.Availability_Factor = pyo.Param(model.Nodes, model.Time, model.Technology) #Availability factor for technology delivering to energy carrier 
-model.Carbon_Intensity = pyo.Param(model.Technology, model.EnergyCarrier) #Carbon intensity when supplying from technology to fuel
+model.Carbon_Intensity = pyo.Param(model.Technology, model.Mode_of_operation) #Carbon intensity when using technology i in mode o
 model.Max_Export = pyo.Param() #Maximum allowable export per year, if no concession is given
 model.Activation_Factor_UP_Regulation = pyo.Param(model.Nodes, model.Time, default = 0) # Activation factor determining the duration of up regulation
 model.Activation_Factor_DWN_Regulation = pyo.Param(model.Nodes, model.Time, default = 0) # Activation factor determining the duration of dwn regulation
@@ -196,12 +196,12 @@ model.x_UP_Tot = pyo.Var(model.Nodes, model.Time, domain=pyo.NonNegativeReals)
 model.x_DWN_Tot = pyo.Var(model.Nodes, model.Time, domain=pyo.NonNegativeReals)
 model.x_DA = pyo.Var(model.Nodes, model.Time, domain= pyo.NonNegativeReals)
 model.x_ID_Up = pyo.Var(model.Nodes, model.Time, domain= pyo.NonNegativeReals)
-model.x_ID_Dwn = pyo.Var(model.Nodes, model.Time, domain= pyo.NonNegativeReals, bounds = (0, 100))
+model.x_ID_Dwn = pyo.Var(model.Nodes, model.Time, domain= pyo.NonNegativeReals)
 model.x_RT_Up = pyo.Var(model.Nodes, model.Time, domain= pyo.NonNegativeReals)
-model.x_RT_Dwn = pyo.Var(model.Nodes, model.Time, domain= pyo.NonNegativeReals, bounds = (0, 100))
+model.x_RT_Dwn = pyo.Var(model.Nodes, model.Time, domain= pyo.NonNegativeReals)
 model.y_out = pyo.Var(model.Nodes, model.Time, model.TechnologyToEnergyCarrier, domain = pyo.NonNegativeReals)
 model.y_in = pyo.Var(model.Nodes, model.Time, model.EnergyCarrierToTechnology, domain = pyo.NonNegativeReals)
-model.y_activity = pyo.Var(model.Nodes, model.Time, model.Technology, domain = pyo.NonNegativeReals)
+model.y_activity = pyo.Var(model.Nodes, model.Time, model.Technology, model.Mode_of_operation, domain = pyo.NonNegativeReals)
 model.z_export = pyo.Var(model.Nodes, model.Time, model.EnergyCarrier, domain = pyo.NonNegativeReals, bounds = (0, 0))
 model.q_charge = pyo.Var(model.Nodes, model.Time, model.FlexibleLoad, domain= pyo.NonNegativeReals)
 model.q_discharge = pyo.Var(model.Nodes, model.Time, model.FlexibleLoad, domain= pyo.NonNegativeReals)
@@ -239,14 +239,9 @@ def objective(model):
                     for b in model.FlexibleLoad)
 
                 # Cost of Consumption and Carbon emissions
-                + sum(
-                    sum(
-                        model.y_activity[n, t, i] * (model.Cost_Energy[n, t, i] + model.Carbon_Intensity[i, e])
-                        for i in model.Technology if (i, e) in model.TechnologyToEnergyCarrier
-                    )
-                    - model.Cost_Export[n, t, e] * model.z_export[n, t, e] 
-                    for e in model.EnergyCarrier
-                )
+                + sum(sum(model.y_activity[n, t, i, o] * (model.Cost_Energy[n, t, i] + model.Carbon_Intensity[i, o])
+                    for i,o in model.Technology * model.Mode_of_operation if (i,o) in model.Carbon_Intensity)
+                    - model.Cost_Export[n, t, e] * model.z_export[n, t, e] for e in model.EnergyCarrier)
 
                 # Real-time adjustment compensation/cost + imbalance cost
                 + model.RK_Up_Price[n, t] * model.x_RT_Up[n, t] - model.RK_Dwn_Price[n, t] * model.x_RT_Dwn[n, t]
@@ -262,9 +257,7 @@ def objective(model):
             )                        
             for t in model.Time
         )
-        
     )
-    
 model.Objective = pyo.Objective(rule=objective, sense=pyo.minimize)
 
 
@@ -290,9 +283,9 @@ def aFRR_dwn_total(model, n, t, e):
 model.aFRRDwnTotal = pyo.Constraint(model.Nodes, model.Time, model.EnergyCarrier, rule=aFRR_dwn_total)
 
 
-###########################################################
-############## ENERGY AND CONVERSION BALANCES #############
-###########################################################
+###########################################
+############## ENERGY BALANCE #############
+###########################################
 
 def energy_balance(model, n, t, e):
     if e == 'Electricity':
@@ -324,24 +317,43 @@ model.EnergyBalance = pyo.Constraint(model.Nodes, model.Time, model.EnergyCarrie
 #####################################################################################
 ########################### MARKET BALANCE DA/ID/RT #################################
 #####################################################################################
-
+ 
 def market_balance(model, n, t, i, e, o):
-    if (i, e) == ("Power_Grid", "Electricity") and (i,e,o) in model.TechnologyToEnergyCarrier:
+    if (i, e) == ("Power_Grid", "Electricity"):
         return (model.y_out[n, t, i, e, o] == model.x_DA[n, t] + model.x_ID_Up[n, t] - model.x_ID_Dwn[n, t] + model.x_RT_Up[n, t] - model.x_RT_Dwn[n, t])
     else:
         return pyo.Constraint.Skip      
-model.MarketBalance = pyo.Constraint(model.Nodes, model.Time, model.Technology, model.EnergyCarrier, model.Mode_of_operation, rule = market_balance)
+model.MarketBalance = pyo.Constraint(model.Nodes, model.Time, model.TechnologyToEnergyCarrier, rule = market_balance)
+
+def market_balance_ID(model, n, p, t, i, e, o):
+    if (i, e) == ("Power_Grid", "Electricity") and n in model.Nodes_ID:
+        return (model.y_out[n, t, i, e, o] == model.x_DA[p, t] + model.x_ID_Up[n, t] - model.x_ID_Dwn[n, t])
+    else:
+        return pyo.Constraint.Skip      
+model.MarketBalanceID = pyo.Constraint(model.Parent_Node, model.Time, model.TechnologyToEnergyCarrier, rule = market_balance_ID)
+ 
+def market_balance_RT(model, n, p, t, i, e, o):
+    if (i, e) == ("Power_Grid", "Electricity") and n in model.Nodes_RT:
+        return (model.y_out[n, t, i, e, o] == model.y_out[p, t, i, e, o] + model.x_RT_Up[n, t] - model.x_RT_Dwn[n, t])
+    else:
+        return pyo.Constraint.Skip          
+model.MarketBalanceRT = pyo.Constraint(model.Parent_Node, model.Time, model.TechnologyToEnergyCarrier, rule = market_balance_RT)
+ 
+def Max_ID_Adjustment(model, n, t):
+        return (0.2*model.x_DA[n, t] >= model.x_ID_Up[n, t] + model.x_ID_Dwn[n, t])
+model.MaxIDAdjustment = pyo.Constraint(model.Nodes, model.Time, rule = Max_ID_Adjustment)
+
 
 #####################################################################################
 ########################### CONVERSION BALANCE ######################################
 #####################################################################################
 
 def conversion_balance_out(model, n, t, i, e, o):
-        return (model.y_out[n, t, i, e, o] == model.y_activity[n, t, i] * model.Technology_To_EnergyCarrier_Efficiency[i, e, o])     
+        return (model.y_out[n, t, i, e, o] == model.y_activity[n, t, i, o] * model.Technology_To_EnergyCarrier_Efficiency[i, e, o])     
 model.ConversionBalanceOut = pyo.Constraint(model.Nodes, model.Time, model.TechnologyToEnergyCarrier, rule = conversion_balance_out)
 
 def conversion_balance_in(model, n, t, i, e, o):
-        return (model.y_in[n, t, i, e, o] == model.y_activity[n, t, i] * model.EnergyCarrier_To_Technlogy_Efficiency[i, e, o])           
+        return (model.y_in[n, t, i, e, o] == model.y_activity[n, t, i, o] * model.EnergyCarrier_To_Technlogy_Efficiency[i, e, o])           
 model.ConversionBalanceIn = pyo.Constraint(model.Nodes, model.Time, model.EnergyCarrierToTechnology, rule = conversion_balance_in)
 
 #####################################################################################
@@ -354,7 +366,6 @@ def Ramping_Technology(model, n, t, i, e, o):
         else:
             return (model.y_out[n, t, i, e, o] <= model.Ramping_Factor[i] * (model.Initial_Installed_Capacity[i] + model.v_new_tech[i]))        
 model.RampingTechnology = pyo.Constraint(model.Nodes, model.Time, model.TechnologyToEnergyCarrier, rule = Ramping_Technology)
-
 
 #####################################################################################
 ############## HEAT PUMP LIMITATION - MÅ ENDRES I HENHOLD TIL INPUTDATA #############
@@ -434,7 +445,6 @@ def no_aFRR_dwn_outside_load_shift(model, n, t, b, e):
         return pyo.Constraint.Skip
 model.NoaFRRDwnOutsideLoadShift = pyo.Constraint(model.Nodes, model.Time, model.ShiftableLoadForEnergyCarrier, rule=no_aFRR_dwn_outside_load_shift)
 
-"""
 #################################################################################
 ############## CONNECTING SoC AND UP/DOWN-REGULATION FOR LOADSHIFT ##############
 #################################################################################
@@ -447,22 +457,16 @@ def aFRR_up_limit_sum_constraint(model, n, i, t, b, e):
             soc_difference = model.Initial_SOC[b]*model.Max_Storage_Capacity[b] - model.q_SoC[n, relevant_times[-1] , b]
             charge_sum = sum(model.Up_Shift_Max * model.Demand[n, t, e] for k in relevant_times if k >= t)
             # Compute the discharge summation for times within the interval and before `t`
-            return model.x_UP[n, t, b]/model.Discharge_Efficiency[b] <= soc_difference + charge_sum
-        
+            return model.x_UP[n, t, b]/model.Discharge_Efficiency[b] <= soc_difference + charge_sum    
         elif t in relevant_times and t > 1:
             # Get the minimum time in the interval
             soc_difference = model.q_SoC[n, t-1, b] - model.q_SoC[n, relevant_times[-1] , b]
             charge_sum = sum(model.Up_Shift_Max * model.Demand[n, t, e] for k in relevant_times if k >= t)
             # Compute the discharge summation for times within the interval and before `t`
-            return model.x_UP[n, t, b]/model.Discharge_Efficiency[b] <= soc_difference + charge_sum
-            
+            return model.x_UP[n, t, b]/model.Discharge_Efficiency[b] <= soc_difference + charge_sum        
         return pyo.Constraint.Skip
-    
     return pyo.Constraint.Skip
-
 model.aFRRUpLimitLoadShift = pyo.Constraint(model.Nodes, model.TimeLoadShift, model.ShiftableLoadForEnergyCarrier, rule=aFRR_up_limit_sum_constraint)
-
-
 
 def aFRR_dwn_limit_sum_constraint(model, n, i, t, b, e):
     if e == 'Electricity':
@@ -474,20 +478,15 @@ def aFRR_dwn_limit_sum_constraint(model, n, i, t, b, e):
             charge_sum = sum(model.Up_Shift_Max * model.Demand[n, t, e] for k in relevant_times if k >= t)
             # Compute the discharge summation for times within the interval and before `t`
             return model.x_DWN[n, t, b] <= soc_difference + charge_sum
-        
         elif t in relevant_times and t > 1:
             # Get the minimum time in the interval
             soc_difference =  model.q_SoC[n, relevant_times[-1] , b] - model.q_SoC[n, t-1, b] 
             charge_sum = sum(model.Up_Shift_Max * model.Demand[n, t, e] for k in relevant_times if k >= t)
             # Compute the discharge summation for times within the interval and before `t`
-            return model.x_DWN[n, t, b] <= soc_difference + charge_sum
-            
+            return model.x_DWN[n, t, b] <= soc_difference + charge_sum   
         return pyo.Constraint.Skip
-    
     return pyo.Constraint.Skip
-
 model.aFRRDownLimitLoadShift = pyo.Constraint(model.Nodes, model.TimeLoadShift, model.ShiftableLoadForEnergyCarrier, rule=aFRR_dwn_limit_sum_constraint)
-"""
 
 def aFRR_limit(model, n, t, b, e):
     if e == 'Electricity' and (b,e) not in model.ShiftableLoadForEnergyCarrier:
@@ -538,8 +537,6 @@ def down_regulation_activation(model, n, t, b, e):
     else:
         return pyo.Constraint.Skip
 model.DownRegulationActivation = pyo.Constraint(model.Nodes, model.Time, model.FlexibleLoadForEnergyCarrier, rule=down_regulation_activation)
-
-
 
 ########################################################################
 ############## FLEXIBLE ASSET CONSTRAINTS/STORAGE DYNAMICS #############
@@ -627,20 +624,15 @@ model.CAPEXFlexibleLoadLim = pyo.Constraint(model.FlexibleLoad, rule=CAPEX_flexi
 ##############################################################
 ##################### CARBON EMISSION LIMIT ##################
 ##############################################################
-"""
+
 def Carbon_Emission_Limit(model, n):
     total_emission = sum(
-        model.y_activity[n, t, i] * model.Carbon_Intensity[i, e]
+        model.y_activity[n, t, i, o] * model.Carbon_Intensity[i, o]
         for t in model.Time
-        for i in model.Technology
-        for e in model.EnergyCarrier
-        if (i, e) in model.TechnologyToEnergyCarrier and (i, e) in model.Carbon_Intensity
+        for i,o in model.Technology * model.Mode_of_operation if (i,o) in model.Carbon_Intensity
     )
-
     return total_emission <= model.Max_Carbon_Emission
-
 model.CarbonEmissionLimit = pyo.Constraint(model.Nodes, rule=Carbon_Emission_Limit)
-"""
 
 ##############################################################
 ##################### NON-ANTICIPATIVITY #####################
