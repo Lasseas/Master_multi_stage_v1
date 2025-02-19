@@ -1,5 +1,3 @@
-#write code here
-
 import numpy as np
 import sys
 import pandas as pd
@@ -39,7 +37,6 @@ def read_all_sheets(excel):
         data_nonempty = data_nonempty.applymap(lambda x: str(x) if pd.notnull(x) else "")
         
         # Save as a .tab file using only the sheet name as the file namec
-
         output_filename = f"{sheet}.tab"
         data_nonempty.to_csv(output_filename, header=True, index=False, sep='\t')
         print(f"Saved file: {output_filename}")
@@ -52,17 +49,12 @@ read_all_sheets('Input_data_testkode.xlsx')
 ####################################################################
 
 model = pyo.AbstractModel()
-
 data = pyo.DataPortal() #Loading the data from a data soruce in a uniform manner (Excel)
+
 
 """
 SETS 
 """
-#sets defined here
-TechToEC = {""}
-
-#Defining Sets
-
 #Declaring Sets
 model.Time = pyo.Set(ordered=True) #Set of time periods (hours)
 model.LoadShiftingIntervals = pyo.Set(ordered=True)
@@ -71,30 +63,19 @@ model.Month = pyo.Set(ordered = True) #Set of months
 model.TimeInMonth = pyo.Set(within = model.Time) #Subset of time periods in month m
 model.Technology = pyo.Set(ordered = True) #Set of technologies
 model.EnergyCarrier = pyo.Set(ordered = True)
-#model.EnergyCarrierToTechnology = pyo.Set(model.EnergyCarrier, within = model.Technology, initialize=tab_to_dict("Subset_TechFromEC.tab")) #I^in -> Subset of technologies that can receive fuel from carreir e
-#model.TechnologyToEnergyCarrier = pyo.Set(model.EnergyCarrier, within = model.Technology, initialize=tab_to_dict("Subset_TechToEC.tab")) #I^out -> Subset of technolgoes that can deliver to fuel carrier e
 model.TechnologyToEnergyCarrier = pyo.Set(dimen=3, ordered = True)
 model.EnergyCarrierToTechnology = pyo.Set(dimen=3, ordered = True)
 model.FlexibleLoad = pyo.Set(ordered=True) #Set of flexible loads (batteries)
 model.FlexibleLoadForEnergyCarrier = pyo.Set(dimen = 2, ordered = True)
-#model.UpShiftForEnergyCarrier = pyo.Set(dimen = 2, ordered = True, within = model.FlexibleLoadForEnergyCarrier)
-#model.DownShiftForEnergyCarrier = pyo.Set(dimen = 2, ordered = True, within = model.FlexibleLoadForEnergyCarrier)
 model.ShiftableLoadForEnergyCarrier = pyo.Set(dimen = 2, ordered = True, within = model.FlexibleLoadForEnergyCarrier)
-#model.FlexibleLoadForEnergyCarrier = pyo.Set(model.EnergyCarrier, within=model.FlexibleLoad, initialize=tab_to_dict("Set_of_FlexibleLoadForEC.tab"))
-#model.ShiftableLoadForEnergyCarrier = pyo.Set(model.EnergyCarrier, within=model.FlexibleLoadForEnergyCarrier, initialize=tab_to_dict("Subset_ShiftableLoads.tab")) #Subset of shiftable loads (shift-able batteries)
 model.Nodes = pyo.Set(ordered=True) #Set of Nodess
 model.Nodes_DA = pyo.Set(within = model.Nodes) #SubSet of Nodess
 model.Nodes_ID = pyo.Set(within = model.Nodes) #SubSet of Nodess
 model.Nodes_RT = pyo.Set(within = model.Nodes) #SubSet of Nodess
-#model.Parents = pyo.Set(ordered=True, within = model.Nodes) #Set of Nodess
 model.Parent_Node = pyo.Set(dimen = 2, ordered = True)
 model.Mode_of_operation = pyo.Set(ordered = True)
 
-
 #Reading the Sets, and loading the data
-
-data = pyo.DataPortal() #Loading the data from a data source in a uniform manner (Excel)
-
 data.load(filename="Set_of_TimeSteps.tab", format="set", set=model.Time)
 data.load(filename="Subset_LoadShiftWindow.tab", format="set", set=model.TimeLoadShift)
 data.load(filename="Set_of_Month.tab", format = "set", set=model.Month)
@@ -106,8 +87,6 @@ data.load(filename="Set_of_EnergyCarrier.tab", format="set", set=model.EnergyCar
 data.load(filename="Subset_TechToEC.tab", format="set", set=model.TechnologyToEnergyCarrier)
 data.load(filename="Subset_ECToTech.tab", format="set", set=model.EnergyCarrierToTechnology)
 data.load(filename="Set_of_FlexibleLoadForEC.tab", format="set", set=model.FlexibleLoadForEnergyCarrier)
-#data.load(filename="Subset_UpShiftForEC.tab", format="set", set=model.UpShiftForEnergyCarrier)
-#data.load(filename="Subset_DownShiftForEC.tab", format="set", set=model.DownShiftForEnergyCarrier)
 data.load(filename="Subset_ShiftableLoadForEC.tab", format="set", set=model.ShiftableLoadForEnergyCarrier)
 data.load(filename="Set_of_LoadShiftingInterval.tab", format = "set", set = model.LoadShiftingIntervals)
 data.load(filename="Subset_Plan_Nodes.tab", format = "set", set = model.Nodes_DA)
@@ -115,15 +94,11 @@ data.load(filename="Subset_ID_Nodes.tab", format = "set", set = model.Nodes_ID)
 data.load(filename="Subset_RT_Nodes.tab", format = "set", set = model.Nodes_RT)
 data.load(filename="Set_parent_coupling.tab", format = "set", set = model.Parent_Node)
 data.load(filename="Set_Mode_of_Operation.tab", format = "set", set = model.Mode_of_operation)
-#data.load(filename="Set_Parent_Node.tab", format = "set", set = model.Parents)
-
 
 
 """
 PARAMETERS
 """
-
-
 #Declaring Parameters
 model.Cost_Energy = pyo.Param(model.Nodes, model.Time, model.Technology, default=0.0)  # Cost of using energy source i at time t
 model.Cost_Battery = pyo.Param(model.FlexibleLoad)
@@ -166,10 +141,8 @@ model.Energy2Power_Ratio = pyo.Param(model.FlexibleLoad)
 model.Max_CAPEX_tech = pyo.Param(model.Technology)
 model.Max_CAPEX_flex = pyo.Param(model.FlexibleLoad)
 model.Max_Carbon_Emission = pyo.Param() #Maximum allowable carbon emissions per year
-#model.Shiftable_Window = pyo.Param() #Time window if flexible time window is used
 
 #Reading the Parameters, and loading the data
-
 data.load(filename="Par_EnergyCost.tab", param=model.Cost_Energy, format = "table")
 data.load(filename="Par_BatteryCost.tab", param=model.Cost_Battery, format = "table")
 data.load(filename="Par_ExportCost.tab", param=model.Cost_Export, format = "table")
@@ -211,13 +184,11 @@ data.load(filename="Par_Ramping_factor.tab", param=model.Ramping_Factor, format 
 data.load(filename="Par_Max_CAPEX_tec.tab", param=model.Max_CAPEX_tech, format = "table")
 data.load(filename="Par_Max_CAPEX_bat.tab", param=model.Max_CAPEX_flex, format = "table")
 data.load(filename="Par_Max_Carbon_Emission.tab", param=model.Max_Carbon_Emission, format = "table")
-#data.load(filename="Filename.tab", param=model.Shiftable_Window, format = "table")
+
 
 """
 VARIABLES
 """
-#Defining Variables
-
 #Declaring Variables
 model.x_UP = pyo.Var(model.Nodes, model.Time, model.FlexibleLoad, domain= pyo.NonNegativeReals)
 model.x_DWN = pyo.Var(model.Nodes, model.Time, model.FlexibleLoad, domain= pyo.NonNegativeReals)
@@ -228,8 +199,8 @@ model.x_ID_Up = pyo.Var(model.Nodes, model.Time, domain= pyo.NonNegativeReals)
 model.x_ID_Dwn = pyo.Var(model.Nodes, model.Time, domain= pyo.NonNegativeReals, bounds = (0, 100))
 model.x_RT_Up = pyo.Var(model.Nodes, model.Time, domain= pyo.NonNegativeReals)
 model.x_RT_Dwn = pyo.Var(model.Nodes, model.Time, domain= pyo.NonNegativeReals, bounds = (0, 100))
-model.y_out = pyo.Var(model.Nodes, model.Time, model.Technology, model.EnergyCarrier, model.Mode_of_operation, domain = pyo.NonNegativeReals)
-model.y_in = pyo.Var(model.Nodes, model.Time, model.Technology, model.EnergyCarrier,  model.Mode_of_operation, domain = pyo.NonNegativeReals)
+model.y_out = pyo.Var(model.Nodes, model.Time, model.TechnologyToEnergyCarrier, domain = pyo.NonNegativeReals)
+model.y_in = pyo.Var(model.Nodes, model.Time, model.EnergyCarrierToTechnology, domain = pyo.NonNegativeReals)
 model.y_activity = pyo.Var(model.Nodes, model.Time, model.Technology, domain = pyo.NonNegativeReals)
 model.z_export = pyo.Var(model.Nodes, model.Time, model.EnergyCarrier, domain = pyo.NonNegativeReals, bounds = (0, 0))
 model.q_charge = pyo.Var(model.Nodes, model.Time, model.FlexibleLoad, domain= pyo.NonNegativeReals)
@@ -246,30 +217,22 @@ OBJECTIVE
 """ 
 def objective(model):
     return (
-        # Investment cost
-        
+        # Investment cost        
         sum(model.Cost_Expansion_Tec[i] * model.v_new_tech[i] for i in model.Technology)
         + sum(model.Cost_Expansion_Bat[b] * model.v_new_bat[b] for b in model.FlexibleLoad)
-        
-        
-        # Day-ahead and Capacity reservation
-        
-        + sum(
-            
+                
+        # Day-ahead and Capacity reservation        
+        + sum(            
             sum(model.Node_Probability[n] * (
                 model.Spot_Price[n, t] * model.x_DA[n, t]
                 - (model.aFRR_Up_Capacity_Price[n, t] * model.x_UP_Tot[n, t] +
                     model.aFRR_Dwn_Capacity_Price[n, t] * model.x_DWN_Tot[n, t])
             ) for n in model.Nodes_DA)
-            
-
-            
+                       
             # Intraday market
             + sum(model.Node_Probability[n] * (model.Intraday_Price[n, t] * (model.x_ID_Up[n, t] - model.x_ID_Dwn[n, t])) for n in model.Nodes_ID)
             
-
-            # Cost/Compensation activation
-            
+            # Cost/Compensation activation            
             + sum(model.Node_Probability[n] * (
                 sum(-model.Activation_Factor_UP_Regulation[n, t] * model.aFRR_Up_Activation_Price[n, t] * model.x_UP_Tot[n, t]
                     + model.Activation_Factor_DWN_Regulation[n, t] * model.aFRR_Dwn_Activation_Price[n, t] * model.x_DWN_Tot[n, t]
@@ -281,7 +244,7 @@ def objective(model):
                         model.y_activity[n, t, i] * (model.Cost_Energy[n, t, i] + model.Carbon_Intensity[i, e])
                         for i in model.Technology if (i, e) in model.TechnologyToEnergyCarrier
                     )
-                    #- model.Cost_Export[n, t, e] * model.z_export[n, t, e] 
+                    - model.Cost_Export[n, t, e] * model.z_export[n, t, e] 
                     for e in model.EnergyCarrier
                 )
 
@@ -302,8 +265,8 @@ def objective(model):
         
     )
     
-
 model.Objective = pyo.Objective(rule=objective, sense=pyo.minimize)
+
 
 """
 CONSTRAINTS
@@ -311,23 +274,20 @@ CONSTRAINTS
 ###########################################################
 ############## aFRR Total, ikke med i LaTeX ###############
 ###########################################################
+
 def aFRR_up_total(model, n, t, e):
     if e == 'Electricity':
         return model.x_UP_Tot[n, t] == sum(model.x_UP[n, t, b] for b in model.FlexibleLoad if (b,e) in model.FlexibleLoadForEnergyCarrier)
     else:
-        return pyo.Constraint.Skip
-   
+        return pyo.Constraint.Skip   
 model.aFRRUpTotal = pyo.Constraint(model.Nodes, model.Time, model.EnergyCarrier, rule=aFRR_up_total)
 
 def aFRR_dwn_total(model, n, t, e):
     if e == 'Electricity':
         return model.x_DWN_Tot[n, t] == sum(model.x_DWN[n, t, b] for b in model.FlexibleLoad if (b,e) in model.FlexibleLoadForEnergyCarrier)
     else:
-        return pyo.Constraint.Skip
-   
+        return pyo.Constraint.Skip   
 model.aFRRDwnTotal = pyo.Constraint(model.Nodes, model.Time, model.EnergyCarrier, rule=aFRR_dwn_total)
-
-
 
 
 ###########################################################
@@ -359,7 +319,6 @@ def energy_balance(model, n, t, e):
                 for b in model.FlexibleLoad if (b,e) in model.FlexibleLoadForEnergyCarrier
             )
         )
-
 model.EnergyBalance = pyo.Constraint(model.Nodes, model.Time, model.EnergyCarrier, rule=energy_balance)
 
 #####################################################################################
@@ -370,8 +329,7 @@ def market_balance(model, n, t, i, e, o):
     if (i, e) == ("Power_Grid", "Electricity") and (i,e,o) in model.TechnologyToEnergyCarrier:
         return (model.y_out[n, t, i, e, o] == model.x_DA[n, t] + model.x_ID_Up[n, t] - model.x_ID_Dwn[n, t] + model.x_RT_Up[n, t] - model.x_RT_Dwn[n, t])
     else:
-        return pyo.Constraint.Skip
-      
+        return pyo.Constraint.Skip      
 model.MarketBalance = pyo.Constraint(model.Nodes, model.Time, model.Technology, model.EnergyCarrier, model.Mode_of_operation, rule = market_balance)
 
 #####################################################################################
@@ -379,16 +337,12 @@ model.MarketBalance = pyo.Constraint(model.Nodes, model.Time, model.Technology, 
 #####################################################################################
 
 def conversion_balance_out(model, n, t, i, e, o):
-        return (model.y_out[n, t, i, e, o] == model.y_activity[n, t, i] * model.Technology_To_EnergyCarrier_Efficiency[i, e, o])
-      
+        return (model.y_out[n, t, i, e, o] == model.y_activity[n, t, i] * model.Technology_To_EnergyCarrier_Efficiency[i, e, o])     
 model.ConversionBalanceOut = pyo.Constraint(model.Nodes, model.Time, model.TechnologyToEnergyCarrier, rule = conversion_balance_out)
 
-
 def conversion_balance_in(model, n, t, i, e, o):
-        return (model.y_in[n, t, i, e, o] == model.y_activity[n, t, i] * model.EnergyCarrier_To_Technlogy_Efficiency[i, e, o])
-           
+        return (model.y_in[n, t, i, e, o] == model.y_activity[n, t, i] * model.EnergyCarrier_To_Technlogy_Efficiency[i, e, o])           
 model.ConversionBalanceIn = pyo.Constraint(model.Nodes, model.Time, model.EnergyCarrierToTechnology, rule = conversion_balance_in)
-
 
 #####################################################################################
 ########################### TECHNOLOGY RAMPING CONSTRAINTS ##########################
@@ -426,8 +380,6 @@ model.HeatPumpInputLimitationMT = pyo.Constraint(model.Nodes, model.Time, rule=h
 
 def loads_shifting_time_window(model, n, i, b, e):
         return sum(model.q_charge[n,t,b] - model.q_discharge[n,t,b]/model.Discharge_Efficiency[b] for (interval, t) in model.TimeLoadShift if interval == i) == 0
-
-#model.LoadShiftingWindow = pyo.Constraint(model.Nodes, model.TimeLoadShift, model.FlexibleLoad, model.EnergyCarrier, rule=loads_shifting_time_winidow)
 model.LoadShiftingWindow = pyo.Constraint(model.Nodes, model.LoadShiftingIntervals, model.ShiftableLoadForEnergyCarrier, rule=loads_shifting_time_window)
 
 def no_discharge_outside_load_shift(model, n, t, b, e):
@@ -435,7 +387,6 @@ def no_discharge_outside_load_shift(model, n, t, b, e):
         return model.q_discharge[n, t, b]  == 0
     else:
         return pyo.Constraint.Skip
-
 model.NoDischargeOutsideLoadShift = pyo.Constraint(model.Nodes, model.Time, model.ShiftableLoadForEnergyCarrier, rule=no_discharge_outside_load_shift)
 
 def no_charge_outside_load_shift(model, n, t, b, e):
@@ -443,9 +394,7 @@ def no_charge_outside_load_shift(model, n, t, b, e):
         return model.q_charge[n, t, b]  == 0
     else:
         return pyo.Constraint.Skip
-
 model.NochargeOutsideLoadShift = pyo.Constraint(model.Nodes, model.Time, model.ShiftableLoadForEnergyCarrier, rule=no_charge_outside_load_shift)
-
 
 ###########################################################
 ############## MAX ALLOWABLE UP/DOWN SHIFT ################
@@ -454,13 +403,10 @@ model.NochargeOutsideLoadShift = pyo.Constraint(model.Nodes, model.Time, model.S
 def Max_total_up_dwn_load_shift(model, n, i, t, b, e):
     #if e == 'Electricity':
         # Extract all time steps `tt` for the given interval `i`
-    relevant_times = [tt for (j, tt) in model.TimeLoadShift if j == i]
-        
+    relevant_times = [tt for (j, tt) in model.TimeLoadShift if j == i]        
     if t in relevant_times:
-        return model.q_charge[n,t,b] + model.q_discharge[n,t,b]/model.Discharge_Efficiency[b] <= model.Up_Shift_Max * model.Demand[n,t,e]
-            
-    return pyo.Constraint.Skip
-
+        return model.q_charge[n,t,b] + model.q_discharge[n,t,b]/model.Discharge_Efficiency[b] <= model.Up_Shift_Max * model.Demand[n,t,e]        
+    return pyo.Constraint.Ski
 model.MaxTotalUpDwnLoadShift = pyo.Constraint(model.Nodes, model.TimeLoadShift, model.ShiftableLoadForEnergyCarrier, rule=Max_total_up_dwn_load_shift)
 
 ###########################################################
@@ -470,9 +416,8 @@ model.MaxTotalUpDwnLoadShift = pyo.Constraint(model.Nodes, model.TimeLoadShift, 
 def aFRR_up_dwn_limit_demand_constraint(model, n, t, b, e):
     if e == 'Electricity':
         return model.x_DWN[n, t, b] + model.x_UP[n, t, b]/model.Discharge_Efficiency[b] <= model.Up_Shift_Max * model.Demand[n, t, e]
-
-    return pyo.Constraint.Skip
-
+    else:
+        return pyo.Constraint.Skip
 model.aFRRUpDwnDemandLimitLoadShift = pyo.Constraint(model.Nodes, model.Time, model.ShiftableLoadForEnergyCarrier, rule=aFRR_up_dwn_limit_demand_constraint)
 
 def no_aFRR_up_outside_load_shift(model, n, t, b, e):
@@ -480,7 +425,6 @@ def no_aFRR_up_outside_load_shift(model, n, t, b, e):
         return model.x_UP[n, t, b]  == 0
     else:
         return pyo.Constraint.Skip
-
 model.NoaFRRUpOutsideLoadShift = pyo.Constraint(model.Nodes, model.Time, model.ShiftableLoadForEnergyCarrier, rule=no_aFRR_up_outside_load_shift)
 
 def no_aFRR_dwn_outside_load_shift(model, n, t, b, e):
@@ -488,8 +432,8 @@ def no_aFRR_dwn_outside_load_shift(model, n, t, b, e):
         return model.x_DWN[n, t, b]  == 0
     else:
         return pyo.Constraint.Skip
-
 model.NoaFRRDwnOutsideLoadShift = pyo.Constraint(model.Nodes, model.Time, model.ShiftableLoadForEnergyCarrier, rule=no_aFRR_dwn_outside_load_shift)
+
 """
 #################################################################################
 ############## CONNECTING SoC AND UP/DOWN-REGULATION FOR LOADSHIFT ##############
@@ -543,15 +487,13 @@ def aFRR_dwn_limit_sum_constraint(model, n, i, t, b, e):
     return pyo.Constraint.Skip
 
 model.aFRRDownLimitLoadShift = pyo.Constraint(model.Nodes, model.TimeLoadShift, model.ShiftableLoadForEnergyCarrier, rule=aFRR_dwn_limit_sum_constraint)
-
-
 """
+
 def aFRR_limit(model, n, t, b, e):
     if e == 'Electricity' and (b,e) not in model.ShiftableLoadForEnergyCarrier:
         return model.x_DWN[n, t, b] + model.x_UP[n, t, b]/model.Discharge_Efficiency[b] <= model.Max_charge_discharge_rate[b] + model.Energy2Power_Ratio[b] * model.v_new_bat[b]
     else:
         return pyo.Constraint.Skip
-
 model.aFRRLimit = pyo.Constraint(model.Nodes, model.Time, model.FlexibleLoadForEnergyCarrier, rule=aFRR_limit)
 
 #################################################################################
@@ -564,8 +506,7 @@ def ensure_storage_capacity_up_regulation(model, n, t, b, e):
     elif e == 'Electricity' and t == 1 and (b,e) not in model.ShiftableLoadForEnergyCarrier:
         return model.Initial_SOC[b]*(model.Max_Storage_Capacity[b] + model.v_new_bat[b]) >= model.x_UP[n, t, b]
     else:
-        return pyo.Constraint.Skip
-    
+        return pyo.Constraint.Skip    
 model.EnsureStorageCapacityUpRegulation = pyo.Constraint(model.Nodes, model.Time, model.FlexibleLoadForEnergyCarrier, rule=ensure_storage_capacity_up_regulation)
 
 
@@ -575,8 +516,7 @@ def ensure_storage_capacity_down_regulation(model, n, t, b, e):
     elif e == 'Electricity' and t == 1 and (b,e) not in model.ShiftableLoadForEnergyCarrier:
         return (model.Max_Storage_Capacity[b] + model.v_new_bat[b])-model.Initial_SOC[b]*(model.Max_Storage_Capacity[b] + model.v_new_bat[b]) >= model.x_DWN[n, t, b]
     else:
-        return pyo.Constraint.Skip
-    
+        return pyo.Constraint.Skip    
 model.EnsureStorageCapacityDownRegulation = pyo.Constraint(model.Nodes, model.Time, model.FlexibleLoadForEnergyCarrier, rule=ensure_storage_capacity_down_regulation)
 
 
@@ -589,7 +529,6 @@ def up_regulation_activation(model, n, t, b, e):
         return model.Activation_Factor_UP_Regulation[n, t] * model.x_UP[n, t, b] <= model.q_discharge[n, t, b]
     else:
         return pyo.Constraint.Skip
-
 model.UpRegulationActivation = pyo.Constraint(model.Nodes, model.Time, model.FlexibleLoadForEnergyCarrier, rule=up_regulation_activation)
 
 
@@ -598,7 +537,6 @@ def down_regulation_activation(model, n, t, b, e):
         return model.Activation_Factor_DWN_Regulation[n, t] * model.x_DWN[n, t, b] <= model.Charge_Efficiency[b] * model.q_charge[n, t, b]
     else:
         return pyo.Constraint.Skip
-
 model.DownRegulationActivation = pyo.Constraint(model.Nodes, model.Time, model.FlexibleLoadForEnergyCarrier, rule=down_regulation_activation)
 
 
@@ -606,6 +544,7 @@ model.DownRegulationActivation = pyo.Constraint(model.Nodes, model.Time, model.F
 ########################################################################
 ############## FLEXIBLE ASSET CONSTRAINTS/STORAGE DYNAMICS #############
 ########################################################################
+
 def flexible_asset_charge_discharge_limit(model, n, t, b, e):
     if (b,e) not in model.ShiftableLoadForEnergyCarrier:
         return (
@@ -615,28 +554,23 @@ def flexible_asset_charge_discharge_limit(model, n, t, b, e):
         )
     else:
         return pyo.Constraint.Skip
-
 model.FlexibleAssetChargeDischargeLimit = pyo.Constraint(model.Nodes, model.Time, model.FlexibleLoadForEnergyCarrier, rule=flexible_asset_charge_discharge_limit)
 
-
 def state_of_charge(model, n, t, b, e):
-    if t == 1:
-        # Initialisation of flexible assets
+    if t == 1:  # Initialisation of flexible assets
         return (
             model.q_SoC[n, t, b]
             == model.Initial_SOC[b] * (model.Max_Storage_Capacity[b] + model.v_new_bat[b]) * (1 - model.Self_Discharge[b])
             + model.q_charge[n, t, b]
             - model.q_discharge[n, t, b] / model.Discharge_Efficiency[b]
         )
-    else:
-        # Storage Dynamics
+    else:       # Storage Dynamics
         return (
             model.q_SoC[n, t, b]
             == model.q_SoC[n, t-1, b] * (1 - model.Self_Discharge[b])
             + model.q_charge[n, t, b]
             - model.q_discharge[n, t, b] / model.Discharge_Efficiency[b]
         )
-
 model.StateOfCharge = pyo.Constraint(model.Nodes, model.Time, model.FlexibleLoadForEnergyCarrier, rule=state_of_charge)
 
 def end_of_horizon_SoC(model, n, t, b, e):
@@ -649,10 +583,7 @@ model.EndOfHorizonSoC = pyo.Constraint(model.Nodes, model.Time, model.FlexibleLo
 
 def flexible_asset_energy_limit(model, n, t, b, e):
     return model.q_SoC[n, t, b] <= model.Max_Storage_Capacity[b] + model.v_new_bat[b]
-
 model.FlexibleAssetEnergyLimits = pyo.Constraint(model.Nodes, model.Time, model.FlexibleLoadForEnergyCarrier, rule=flexible_asset_energy_limit)
-
-
 
 ####################################################
 ############## AVAILABILITY CONSTRAINT #############
@@ -663,16 +594,15 @@ def supply_limitation(model, n, t, i, e, o):
             <= model.Availability_Factor[n, t, i] * (model.Initial_Installed_Capacity[i] + model.v_new_tech[i]))
 model.SupplyLimitation = pyo.Constraint(model.Nodes, model.Time, model.TechnologyToEnergyCarrier, rule=supply_limitation)
 
-
 ##############################################################
 ############## EXPORT LIMITATION AND GRID TARIFF #############
 ##############################################################
+
 def export_limitation(model, n, t, e):
     if e == 'Electricity':
         return model.z_export[n, t, e] <= model.Max_Export
     else:
         return pyo.Constraint.Skip
-
 model.ExportLimitation = pyo.Constraint(model.Nodes, model.Time, model.EnergyCarrier, rule=export_limitation)
 
 def peak_load(model, n, t, i, e, o, m):
@@ -680,20 +610,18 @@ def peak_load(model, n, t, i, e, o, m):
         return (model.y_out[n, t, i, e, o] <= model.y_max[n, m])
     else:
         return pyo.Constraint.Skip
-
 model.PeakLoad = pyo.Constraint(model.Nodes, model.TimeInMonth, model.TechnologyToEnergyCarrier, model.Month, rule=peak_load)
 
 ##############################################################
 ##################### INVESTMENT LIMITATIONS #################
 ##############################################################
+
 def CAPEX_technology_limitations(model, i):
     return (model.Cost_Expansion_Tec[i] * model.v_new_tech[i] <= model.Max_CAPEX_tech[i])
-
 model.CAPEXTechnologyLim = pyo.Constraint(model.Technology, rule=CAPEX_technology_limitations)
 
 def CAPEX_flexibleLoad_limitations(model, b):
     return (model.Cost_Expansion_Bat[b] * model.v_new_bat[b] <= model.Max_CAPEX_flex[b])
-
 model.CAPEXFlexibleLoadLim = pyo.Constraint(model.FlexibleLoad, rule=CAPEX_flexibleLoad_limitations)
 
 ##############################################################
@@ -743,31 +671,12 @@ def Reserve_Capacity_Dwn_NA(model, n, p, t, b, e):
         return pyo.Constraint.Skip
 model.ReserveCapacityDwn = pyo.Constraint(model.Parent_Node, model.Time, model.FlexibleLoadForEnergyCarrier, rule = Reserve_Capacity_Dwn_NA) 
 
-
 def Reserve_Capacity_Up_NA(model, n, p, t, b, e):
     if e == "Electricity":
         return (model.x_UP[n, t, b] == model.x_UP[p, t, b])
     else:
         return pyo.Constraint.Skip
-    
 model.DayAheadToIntradayUp = pyo.Constraint(model.Parent_Node, model.Time, model.FlexibleLoadForEnergyCarrier, rule = Reserve_Capacity_Up_NA) 
-
-
-"""
-# Start the timer
-start_time = time.time()
-
-# Solve the problem
-opt = SolverFactory("gurobi", Verbose=True)
-results = opt.solve(our_model)
-
-# Stop the timer
-end_time = time.time()
-
-# Calculate and print the elapsed time
-elapsed_time = end_time - start_time
-print(f"Optimization problem solved in {elapsed_time:.2f} seconds")
-"""
 
 
 """
@@ -777,15 +686,17 @@ our_model = model.create_instance(data)
 our_model.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT) #Import dual values into solver results
 import pdb; pdb.set_trace()
 
-#start the timer
-start_time = time.time()
 """
 SOLVING PROBLEM
 """
 opt = SolverFactory("gurobi", Verbose=True)
 #opt.options['LogFile'] = 'gurobi_log.txt'
 
+#start the timer
+start_time = time.time()
+
 results = opt.solve(our_model, tee=True)
+
 #stop the timer
 end_time = time.time()
 running_time = end_time - start_time
@@ -807,65 +718,20 @@ print(f"Machine: {platform.machine()}")
 print(f"System: {platform.system()} {platform.release()}")
 #print(f"CPU Cores: {psutil.cpu_count(logical=True)} (Logical), {psutil.cpu_count(logical=False)} (Physical)")
 #print(f"Total Memory: {psutil.virtual_memory().total / 1e9:.2f} GB")
-
-
 print("-" * 70)
-import pdb; pdb.set_trace()
+#import pdb; pdb.set_trace()
+
+
+
 """
 EXTRACT VALUE OF VARIABLES AND WRITE THEM INTO EXCEL FILE
 """
 """
-def save_results_to_excel(model_instance):
-    # Create an Excel writer object
-    with pd.ExcelWriter('Variable_results.xlsx', engine='xlsxwriter') as writer:
-        
-        # Storing x_aFRR_UP results
-        x_aFRR_UP_data = [(t, pyo.value(model_instance.x_aFRR_UP[t])) for t in model_instance.Time]
-        x_aFRR_UP_df = pd.DataFrame(x_aFRR_UP_data, columns=['Time', 'x_aFRR_UP'])
-        x_aFRR_UP_df.to_excel(writer, sheet_name='x_aFRR_UP', index=False)
-        
-        # Storing x_aFRR_DWN results
-        x_aFRR_DWN_data = [(t, pyo.value(model_instance.x_aFRR_DWN[t])) for t in model_instance.Time]
-        x_aFRR_DWN_df = pd.DataFrame(x_aFRR_DWN_data, columns=['Time', 'x_aFRR_DWN'])
-        x_aFRR_DWN_df.to_excel(writer, sheet_name='x_aFRR_DWN', index=False)
-        
-        # Storing y_supply results
-        y_supply_data = [(s, t, i, pyo.value(model_instance.y_supply[s, t, i])) for s in model_instance.Nodess for t in model_instance.Time for i in model_instance.ElectricitySources]
-        y_supply_df = pd.DataFrame(y_supply_data, columns=['Nodes', 'Time', 'EnergySource', 'y_supply'])
-        y_supply_df.to_excel(writer, sheet_name='y_supply', index=False)
-        
-        # Storing z_export results
-        z_export_data = [(s, t, pyo.value(model_instance.z_export[s, t])) for s in model_instance.Nodess for t in model_instance.Time]
-        z_export_df = pd.DataFrame(z_export_data, columns=['Nodes', 'Time', 'z_export'])
-        z_export_df.to_excel(writer, sheet_name='z_export', index=False)
-        
-        # Storing q_charge results
-        q_charge_data = [(s, t, b, pyo.value(model_instance.q_charge[s, t, b])) for s in model_instance.Nodess for t in model_instance.Time for b in model_instance.FlexibleLoads]
-        q_charge_df = pd.DataFrame(q_charge_data, columns=['Nodes', 'Time', 'FlexibleLoad', 'q_charge'])
-        q_charge_df.to_excel(writer, sheet_name='q_charge', index=False)
-        
-        # Storing q_discharge results
-        q_discharge_data = [(s, t, b, pyo.value(model_instance.q_discharge[s, t, b])) for s in model_instance.Nodess for t in model_instance.Time for b in model_instance.FlexibleLoads]
-        q_discharge_df = pd.DataFrame(q_discharge_data, columns=['Nodes', 'Time', 'FlexibleLoad', 'q_discharge'])
-        q_discharge_df.to_excel(writer, sheet_name='q_discharge', index=False)
-        
-        # Storing e_stored results (for flexible loads)
-        e_stored_data = [(t, b, pyo.value(model_instance.e_stored[t, b])) for t in model_instance.Time for b in model_instance.FlexibleLoads]
-        e_stored_df = pd.DataFrame(e_stored_data, columns=['Time', 'FlexibleLoad', 'e_stored'])
-        e_stored_df.to_excel(writer, sheet_name='e_stored', index=False)
-
-# Call the function to save the results
-#save_results_to_excel(our_model)
-
-
-print("Results saved to Variable_Results.xlsx")
-"""
-
 def save_results_to_excel(model_instance, filename="Variable_Results.xlsx"):
-    """
-    Saves Pyomo variable results into an Excel file with filtered output.
-    Only includes rows with non-zero or non-null values for variables.
-    """
+    
+    # Saves Pyomo variable results into an Excel file with filtered output.
+    # Only includes rows with non-zero or non-null values for variables.
+    
     import pandas as pd
     from pyomo.environ import value
 
@@ -906,132 +772,12 @@ def save_results_to_excel(model_instance, filename="Variable_Results.xlsx"):
 
 # Usage after solving the model
 save_results_to_excel(our_model, filename="Variable_Results.xlsx")
-
 """
 
-def plot_results_from_excel(input_file, output_folder):
-    
-    os.makedirs(output_folder, exist_ok=True)  # Create folder if it doesn't exist
-
-    # Define mapping for Index_1 to Nodes names
-    Nodes_mapping = {1: "Nodes 1", 2: "Nodes 2", 3: "Nodes 3"}
-
-    # Read the Excel file
-    excel_file = pd.ExcelFile(input_file)
-
-    for sheet_name in excel_file.sheet_names:
-        # Read the sheet
-        df = pd.read_excel(excel_file, sheet_name=sheet_name)
-
-        if sheet_name in ["x_aFRR_DWN", "x_aFRR_UP"]:
-            # For x_aFRR_DWN and x_aFRR_UP, plot Index_1 vs. second column
-            x_axis = df["Index_1"]
-            y_axis = df.iloc[:, 1]  # Second column
-
-            plt.figure(figsize=(12, 8))
-            plt.plot(x_axis, y_axis, label=sheet_name, marker='o')
-
-            # Add title and labels
-            plt.title(f"{sheet_name}")
-            plt.xlabel("Hours")
-            plt.ylabel("Values")
-            plt.legend(loc='best')  # Place legend inside the plot
-            plt.grid(True)
-
-            # Save the plot
-            plot_filename = f"{sheet_name}.png"
-            plt.savefig(os.path.join(output_folder, plot_filename))
-            plt.tight_layout()
-            plt.close()  # Close the plot to avoid overlapping
-
-            print(f"Single plot saved for {sheet_name} in {output_folder}")
-
-        elif sheet_name in ["x_aFRR_DWN_ind", "x_aFRR_UP_ind"]:
-            # For x_aFRR_DWN_ind and x_aFRR_UP_ind, plot Index_1 vs. last column for each unique Index_2
-            if "Index_1" in df.columns and "Index_2" in df.columns:
-                plt.figure(figsize=(12, 8))
-
-                x_axis = df["Index_1"]
-                value_column = df.columns[-1]  # Last column contains the values
-                unique_variables = df["Index_2"].unique()
-
-                for variable in unique_variables:
-                    variable_data = df[df["Index_2"] == variable]
-                    plt.plot(
-                        variable_data["Index_1"], variable_data[value_column],
-                        label=variable, marker='o'
-                    )
-
-                # Add title and labels
-                plt.title(f"{sheet_name}")
-                plt.xlabel("Hours")
-                plt.ylabel("Values")
-                plt.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=3, title="Variables", borderaxespad=0.)
-                plt.grid(True)
-
-                # Save the plot
-                plot_filename = f"{sheet_name}.png"
-                plt.tight_layout()
-                plt.savefig(os.path.join(output_folder, plot_filename))
-                plt.close()  # Close the plot to avoid overlapping
-
-                print(f"Plot saved for {sheet_name} in {output_folder}")
-
-        else:
-            # Default behavior for all other sheets
-            if "Index_1" in df.columns and "Index_2" in df.columns:
-                unique_index_1 = df["Index_1"].unique()
-
-                # Create plots for each Index_1 value
-                for index_1_value in unique_index_1:
-                    filtered_df = df[df["Index_1"] == index_1_value]
-                    x_axis = filtered_df["Index_2"]
-
-                    plt.figure(figsize=(12, 8))
-
-                    if "Index_3" in filtered_df.columns:
-                        variable_column = "Index_3"
-                        value_column = df.columns[-1]
-                        unique_variables = filtered_df[variable_column].unique()
-
-                        for variable in unique_variables:
-                            variable_data = filtered_df[filtered_df[variable_column] == variable]
-                            plt.plot(
-                                variable_data["Index_2"], variable_data[value_column],
-                                label=variable, marker='o'
-                            )
-
-                        plt.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=3, title="Variables", borderaxespad=0.)
-                    else:
-                        value_column = df.columns[-1]
-                        plt.plot(filtered_df["Index_2"], filtered_df[value_column], label=value_column, marker='o')
-
-                    # Use Nodes mapping for title
-                    Nodes_name = Nodes_mapping.get(index_1_value, f"Index_1 = {index_1_value}")
-                    plt.title(f"{sheet_name} ({Nodes_name})")
-                    plt.xlabel("Hours")
-                    plt.ylabel("Values")
-                    plt.grid(True)
-
-                    plot_filename = f"{sheet_name}_{Nodes_name.replace(' ', '_')}.png"
-                    plt.tight_layout()
-                    plt.savefig(os.path.join(output_folder, plot_filename))
-                    plt.close()
-
-                    print(f"Plot saved for {sheet_name} ({Nodes_name}) in {output_folder}")
-
-
-
-# Usage
-if __name__ == "__main__":
-    input_excel_file = "Variable_Results.xlsx"  # Path to the Excel file
-    output_plots_folder = "plots"  # Folder to save the plots
-
-    # Generate plots
-    plot_results_from_excel(input_excel_file, output_plots_folder)
-
 """
-
+PLOT RESULTS
+"""
+"""
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -1039,8 +785,7 @@ from matplotlib.cm import get_cmap
 import numpy as np
 
 
-def generate_unique_colors(num_colors, colormap='tab20'):
-    """Generate a list of unique colors."""
+def generate_unique_colors(num_colors, colormap='tab20'): #Generate a list of unique colors.
     cmap = get_cmap(colormap)
     return [cmap(i / num_colors) for i in range(num_colors)]
 
@@ -1148,14 +893,13 @@ def plot_results_from_excel(input_file, output_folder):
                     
 
 
-
 # Usage
 if __name__ == "__main__":
     input_excel_file = "Variable_Results.xlsx"  # Path to the Excel file
     output_plots_folder = "plots"  # Folder to save the plots
 
     # Generate plots
-    plot_results_from_excel(input_excel_file, output_plots_folder)
+    #plot_results_from_excel(input_excel_file, output_plots_folder)
 
 
 def extract_demand_and_flex_demand(model):
@@ -1199,52 +943,6 @@ for Nodes in merged_df['Nodes'].unique():
 plt.xlabel('Time')
 plt.ylabel('Demand (MW)')
 plt.title('Demand and Flexible Demand Over Time')
-plt.legend()
-plt.grid(True)
-plt.show()
-
-
-"""
-
-# Extract Demand and flex_demand from the model results
-def extract_demand_and_flex_demand(model):
-    demand_data = []
-    flex_demand_data = []
-
-    for s in model.Nodes:
-        for t in model.Time:
-            for e in model.EnergyCarrier:
-                # Retrieve the values
-                demand_value = pyo.value(model.Demand[s, t,"Electricity"])
-                flex_demand_value = pyo.value(model.Demand[s, t, "Electricity"] + model.q_charge[s, t, "Shiftable_Electricity_Up"] + model.q_charge[s, t, "Shiftable_Electricity_Down"] - model.q_discharge[s, t, "Shiftable_Electricity_Up"] - model.q_discharge[s, t, "Shiftable_Electricity_Down"] )
-
-                # Append to lists
-                demand_data.append({'Nodes': 1, 'Time': t, 'EnergyCarrier': 'Electricity', 'Demand': demand_value})
-                flex_demand_data.append({'Nodes': 1, 'Time': t, 'EnergyCarrier': 'Electricity', 'flex_demand': flex_demand_value})
-
-    # Convert to DataFrame
-    demand_df = pd.DataFrame(demand_data)
-    flex_demand_df = pd.DataFrame(flex_demand_data)
-
-    return demand_df, flex_demand_df
-# Get the data
-demand_df, flex_demand_df = extract_demand_and_flex_demand(our_model)
-
-# Merge the DataFrames for plotting
-merged_df = pd.merge(demand_df, flex_demand_df, on=['Nodes', 'Time', 'Electricity'], suffixes=('_Demand', '_flex'))
-
-# Plotting
-plt.figure(figsize=(12, 6))
-
-# Group by Nodes and energy carrier for multiple plots
-
-
-plt.plot('Time', 'Demand', label='Demand - {Nodes} - {"Electricity"}')
-plt.plot(group['Time'], group['flex_demand'], '--', label=f'Flex Demand - {Nodes} - {"Electricity"}')
-
-plt.xlabel('Time')
-plt.ylabel('Demand')
-plt.title('Demand and Flex Demand Over Time')
 plt.legend()
 plt.grid(True)
 plt.show()
