@@ -234,13 +234,13 @@ def objective(model):
             
             # Cost/Compensation activation            
             + sum(model.Node_Probability[n] * (
-                sum(-model.Activation_Factor_UP_Regulation[n, t] * model.aFRR_Up_Activation_Price[n, t] * model.x_UP_Tot[n, t]
-                    + model.Activation_Factor_DWN_Regulation[n, t] * model.aFRR_Dwn_Activation_Price[n, t] * model.x_DWN_Tot[n, t]
-                    for b in model.FlexibleLoad)
+                -model.Activation_Factor_UP_Regulation[n, t] * model.aFRR_Up_Activation_Price[n, t] * model.x_UP_Tot[n, t]
+                + model.Activation_Factor_DWN_Regulation[n, t] * model.aFRR_Dwn_Activation_Price[n, t] * model.x_DWN_Tot[n, t]
+                    
 
                 # Cost of Consumption and Carbon emissions
                 + sum(sum(model.y_activity[n, t, i, o] * (model.Cost_Energy[n, t, i] + model.Carbon_Intensity[i, o])
-                    for i,o in model.Technology * model.Mode_of_operation if (i,o) in model.Carbon_Intensity)
+                    for i,e,o in model.TechnologyToEnergyCarrier)
                     - model.Cost_Export[n, t, e] * model.z_export[n, t, e] for e in model.EnergyCarrier)
 
                 # Real-time adjustment compensation/cost + imbalance cost
@@ -420,9 +420,9 @@ def Max_total_up_dwn_load_shift(model, n, i, t, b, e):
     return pyo.Constraint.Ski
 model.MaxTotalUpDwnLoadShift = pyo.Constraint(model.Nodes, model.TimeLoadShift, model.ShiftableLoadForEnergyCarrier, rule=Max_total_up_dwn_load_shift)
 
-###########################################################
-############## aFRR PARTICIPATION CONSTRAINTS #############
-###########################################################
+##########################################################################
+############## aFRR PARTICIPATION CONSTRAINTS FOR LOAD SHIFT #############
+##########################################################################
 
 def aFRR_up_dwn_limit_demand_constraint(model, n, t, b, e):
     if e == 'Electricity':
@@ -487,6 +487,10 @@ def aFRR_dwn_limit_sum_constraint(model, n, i, t, b, e):
         return pyo.Constraint.Skip
     return pyo.Constraint.Skip
 model.aFRRDownLimitLoadShift = pyo.Constraint(model.Nodes, model.TimeLoadShift, model.ShiftableLoadForEnergyCarrier, rule=aFRR_dwn_limit_sum_constraint)
+
+##############################################################################
+############## aFRR PARTICIPATION CONSTRAINTS FOR FLEXIBLE LOADS #############
+##############################################################################
 
 def aFRR_limit(model, n, t, b, e):
     if e == 'Electricity' and (b,e) not in model.ShiftableLoadForEnergyCarrier:
@@ -629,7 +633,7 @@ def Carbon_Emission_Limit(model, n):
     total_emission = sum(
         model.y_activity[n, t, i, o] * model.Carbon_Intensity[i, o]
         for t in model.Time
-        for i,o in model.Technology * model.Mode_of_operation if (i,o) in model.Carbon_Intensity
+        for i,e,o in model.TechnologyToEnergyCarrier
     )
     return total_emission <= model.Max_Carbon_Emission
 model.CarbonEmissionLimit = pyo.Constraint(model.Nodes, rule=Carbon_Emission_Limit)
